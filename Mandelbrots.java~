@@ -1,0 +1,293 @@
+import java.awt.Color;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.IOException;
+import java.awt.event.*;
+
+import javax.imageio.ImageIO;
+
+import acm.graphics.*;
+import acm.program.*;
+public class Mandelbrots extends GraphicsProgram{
+	 double time, oldTime, frameTime; //current and old time, and their difference (for input)
+	    boolean keyReleased, keyPressed; //two bools for keys
+	    int showText = 0;
+	
+	GImage img;
+	GRect scaled;
+	Thread t;
+	
+	int[][] pixels=new int[1][1];
+	 //each iteration, it calculates: new = old*old + c, where c is a constant and old starts at current pixel
+    double pr, pi;                   //real and imaginary part of the pixel p
+   
+    double newRe, newIm, oldRe, oldIm;   //real and imaginary parts of new and old
+    
+    double zoom = 1, moveX=0,  moveY =0; //you can change these to zoom and change position
+    double aspectRatio=1; //real:nonreal
+    int color; //the RGB color value for the pixel
+  
+    int maxIterations = 248; //after how many iterations the function should stop
+   int width=700, height=width;
+	
+   
+   
+   GLabel xCoord, yCoord, iter, zoomSet;
+   String xLabel=" X: ";
+   String yLabel="Y: ";
+   String zoomLabel="Zoom: ";
+   String iterLabel="Iter: ";
+   boolean checked=false;
+	public void init() {
+		setSize(width, height);
+		addMouseListeners();
+		addKeyListeners();
+		scaled=new GRect(0,0,0,0);
+		scaled.setFilled(false);
+		scaled.setColor(Color.BLUE);
+		
+	}
+	public void run() {
+		img=new GImage(pixels);
+		add(img);
+		add(scaled);
+	int  oldIt=0;
+	double oldX=0,oldZoom=0, oldY=0, oldAspectRatio=0;
+		while(true) {
+			println("MoveX: "+moveX+" MoveY: " + moveY+ " Zoom: "+ zoom + " AspectRatio: "+aspectRatio+" Iterations: "+maxIterations);
+			if(oldX==moveX && oldZoom==zoom && oldY==moveY && oldIt==maxIterations && oldAspectRatio==aspectRatio) {
+				continue;
+			}
+			if(t!=null && !checked && !t.isAlive()) {
+				checked=!checked;
+				if(!Info.reset) {
+				maxIterations=(int) Info.iterations;
+				width=(int) Info.width;
+				height=(int) Info.height;
+				setSize(width, height);
+				} else {
+					zoom=1;
+					moveX=0;
+					moveY=0;
+					
+				}
+				
+			}
+			println("Changed");
+		drawMandelbrots();
+		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        for(int i=0; i<width; i++) {
+        	for(int j=0; j<height; j++) {
+        		image.setRGB(i, j, pixels[i][j]);
+        	}
+        }
+        img.setImage(image);
+     /* 	try {
+    		        ImageIO.write( image , "png", new File(GenerateImages.fileName+".png"));
+    		        System.out.println("Finished writing");
+
+    	} catch(IOException e) {
+    		e.printStackTrace();
+    	}
+        
+      oldX=moveX;
+		oldZoom=zoom;
+		oldY=moveY;
+		oldIt=maxIterations;
+		oldAspectRatio=aspectRatio;  */
+		}
+		
+		
+		
+		
+	}
+
+	
+	public int[][] drawMandelbrots() {
+		//read in new values of parameters and call paint()
+		
+		
+		return paint(width, height, zoom, moveX, moveY, maxIterations);
+		//img=new GImage(pixels);
+		
+		
+		
+		
+	}
+	double logBase = 1.0 / Math.log(2.0);
+	double logHalfBase = Math.log(0.5)*logBase;
+	
+	public int[][] paint(int w, int h, double zoom, double moveX,  double moveY, int maxIterations ) {
+		pixels=new int[w][h];
+		for(int x = 0; x < w; x++)
+	        for(int y = 0; y < h; y++)
+	        {
+	            //calculate the initial real and imaginary part of z, based on the pixel location and zoom and position values
+	          //the origin of the cartesian axis of this canvas will start at coordinates (moveX, moveY);
+	        	pr = 1.5 * (x - w / 2) / (0.5 *aspectRatio* zoom * w) + moveX;
+	            pi = (y - h / 2) / (0.5 * zoom * h) + moveY;
+	            newRe = newIm = oldRe = oldIm = 0; //these should start at 0,0
+	            //i will represent the number of iterations
+	            int i;
+	            //start the iteration process
+	            for(i = 0; i < maxIterations; i++)
+	            {
+	                //remember value of previous iteration
+	                oldRe = newRe;
+	                oldIm = newIm;
+	                //the actual iteration, the real and imaginary part are calculated
+	                newRe = oldRe * oldRe - oldIm * oldIm + pr;
+	                newIm = 2 * oldRe * oldIm + pi;
+	                //if the point is outside the circle with radius 2: stop
+	                if((newRe * newRe + newIm * newIm) > 4) break;
+	            }
+	            //use color model conversion to get rainbow palette, make brightness black if maxIterations reached
+	           int condition= (i<maxIterations) ?  0 : 1 ;
+	           // color = hsvToRGB(i % 256, 255, 255 * condition);
+	            //draw the pixel
+	            //pixels[x][y]=color;
+	          //double smooth= i- Math.log((newRe*newRe+newIm*newIm)/(2));
+	           //double smooth= 5+i-logHalfBase- Math.log(Math.log(newRe+newIm))*logBase;
+	           	         //  pixels[x][y]= hsvToRGB((float) smooth/i, .9f , (float) 255*condition);
+
+	          // pixels[x][y]=hsvToRGB((float)(i*smooth/maxIterations), 1, (float) 10*smooth/maxIterations);
+	      // double smooth=256 * i + (int)(255.0 * Math.log(4.0 / (oldIm+oldRe+0.0001)) / Math.log((newRe + newIm) / (oldRe+oldIm+.00001)));
+	        pixels[x][y]=getColor(i);
+	        }
+		
+		
+		
+		
+		
+		return pixels;
+		
+		
+		
+	}
+	
+	/*private void setLabels(double x, double y, double zoom, double it) {
+		xCoord=new GLabel();
+		yCoord=new GLabel();
+		zoom=new GLabel();
+	    iter=new Glabel();
+	    
+	}
+	*/
+	
+	public int hsvToRGB(double h, double s, double v) {
+		 if ( v > 1.0 ) v = 1.0;
+		  double hp = h/60.0;
+		  double c = v * s;
+		  double x = c*(1 - Math.abs((hp % 2) - 1));
+		double red=0, green=0, blue=0;
+		  Color rgb;
+
+		  if ( 0<=hp && hp<1 ) rgb = new Color((int)c, (int) x, 0);
+		  if ( 1<=hp && hp<2 ) rgb = new Color((int)x, (int) c, 0);
+		  if ( 2<=hp && hp<3 ) rgb = new Color((int)0, (int) c, (int) x);
+		  if ( 3<=hp && hp<4 ) rgb =  new Color((int)0, (int) x, (int) c);
+		  if ( 4<=hp && hp<5 ) rgb =  new Color((int)x, (int) 0, (int) c);
+		  if ( 5<=hp && hp<6 ) rgb =  new Color((int)c, (int) 0, (int) x);
+		  else rgb=new Color(0,0,0);
+		  double m = v - c;
+		  red += rgb.getRed()+m;
+		  green=rgb.getGreen()+m;
+		  blue=rgb.getBlue()+m;
+
+		  red *= 255;
+		  green *= 255;
+		  blue *= 255;
+		  return new Color((int) red, (int) green, (int) blue).getRGB();
+		
+	}
+	private int getColor(int i) {
+		
+		if(i>=maxIterations) return Color.black.getRGB();
+		
+		return Color.HSBtoRGB((float) (i)/256f, 1, i/(i+8f));
+		
+	}
+	public double abs(double x) {
+		return Math.abs(x);
+	}
+	/*Event methods */
+	
+	
+	double oldX=0, oldY=0;
+	public void mousePressed(MouseEvent e) {
+			scaled.setLocation(e.getX(), e.getY());
+			oldX=e.getX();
+			oldY=e.getY();
+			println("pressed");
+	}
+	
+	public void mouseDragged(MouseEvent e) {
+		double x=e.getX(), y=e.getY();
+		if(x>oldX && y>oldY) scaled.setSize(x-oldX, y-oldY);
+		else	if(x<oldX && y>oldY) {
+			scaled.setLocation(x, oldY);
+			scaled.setSize(abs(x-oldX), abs(y-oldY));
+		} 
+		else if(x>oldX && y<oldY) {
+			scaled.setLocation(oldX, y);
+			scaled.setSize(abs(x-oldX), abs(y-oldY));
+		} else if(x<oldX && y<oldY) {
+			scaled.setLocation(x, y);
+			scaled.setSize(abs(x-oldX), abs(y-oldY));
+		}
+				println("Dragged");
+
+	}
+	public void mouseReleased(MouseEvent e) {
+		//Calculate new zoom and moveX, moveY and iterations
+		if(scaled.getWidth()>0.000001) {
+		double checkPr, checkPi;
+		int a=(int) scaled.getX();
+		int b= (int) scaled.getY();
+		
+			checkPr = 1.5 * (a - width / 2) / (0.5 *aspectRatio* zoom * width) + moveX;
+        checkPi = (b - height / 2) / (0.5 * zoom * height) + moveY;
+        
+		aspectRatio=scaled.getWidth()/scaled.getHeight();
+		zoom*=height/scaled.getHeight();
+		maxIterations*=Math.log10(zoom)/2+1;
+		moveX=-1.5*(-width/2)/(.5*aspectRatio*zoom* width)+checkPr;
+		moveY=-(-height/2)/(.5*zoom*height)+checkPi;
+		//moveX+=(scaled.getX()+scaled.getWidth()/2-moveX)/(width/2)*3;   //2 for the radius
+		//moveY+=(scaled.getY()+scaled.getWidth()/2- moveY)/(height/2)*3;   // /(height/2);
+		println("Released");
+		scaled.setSize(0,0);
+		}
+		
+	}
+	public void mouseClicked(MouseEvent e) {
+		scaled.setSize(0,0);
+			println("Clicked");
+}
+	public void keyPressed(KeyEvent e) {
+		switch(e.getKeyCode()) {
+		case KeyEvent.VK_P: new Thread((new GenerateImages(pixels))).start();
+		break;
+		case KeyEvent.VK_LEFT: moveX-= .2*moveX; break;
+		case KeyEvent.VK_RIGHT: moveX+=.2*moveX; break;
+		case KeyEvent.VK_UP: moveY+=.2*moveY; break;
+		case KeyEvent.VK_DOWN: moveY-=.2*moveY; break;
+		case KeyEvent.VK_Z: zoom*=1.2; break;
+		case KeyEvent.VK_X: zoom/=1.2; break;
+		case KeyEvent.VK_A: aspectRatio*=1.5; break;
+		case KeyEvent.VK_S: aspectRatio/=1.5;
+		case KeyEvent.VK_Y: t=new Thread(new Info()); t.start(); 
+		default: break;
+		}
+		println("The keycode was: "+e.getKeyCode());
+	}
+	
+}
+
+
+
+	
+
+	
